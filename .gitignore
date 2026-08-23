@@ -1,0 +1,60 @@
+# Environment
+.env
+.env.production
+.env.*.local
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+htmlcov/
+.coverage
+
+# Node
+node_modules/
+.next/
+out/
+dist/
+build/
+.turbo/
+*.tsbuildinfo
+
+# Scan artifacts (screenshots, HTML report exports)
+artifacts/
+scan_artifacts/
+*.db
+
+# Backups and dumps
+backups/
+*.sql
+*.sql.gz
+*.dump
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editors
+.vscode/
+.idea/
+*.swp
+
+# Logs
+*.log
+npm-debug.log*
+
+# Secrets
+*.pem
+*.key
+secrets/
+
+# Local-only dev scripts (manual test sends, one-offs)
+tests/backend/manual/
+
+# Claude Code local settings (personal, not shared)
+.claude/settings.local.json

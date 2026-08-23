@@ -1,0 +1,8 @@
+{
+  "name": "@veritech-scan/shared",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Cross-cutting TypeScript types and constants shared across Veritech Scan apps.",
+  "main": "src/index.ts",
+  "types": "src/index.ts"
+}

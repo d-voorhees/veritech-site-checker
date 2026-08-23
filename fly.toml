@@ -1,0 +1,57 @@
+# Veritech Scan — Fly.io app configuration for the web/API Machine.
+#
+# Scan-runner Machines are NOT managed here — they're created on demand,
+# one per scan, via the Fly Machines API (apps/api/app/services/
+# fly_machines.py + scan_orchestrator.py::request_scan_runner) and destroy
+# themselves when the scan finishes (config.auto_destroy = true). This file
+# only configures the always-deployed, autostop/autostart web/API process.
+#
+# `app` below is a placeholder — scripts/deploy-fly.sh always passes
+# --app "$FLY_APP_NAME" explicitly, which overrides it. See
+# docs/fly-deployment.md.
+
+app = "veritech-scan"
+primary_region = "iad"
+
+[build]
+
+[env]
+  APP_ENV = "production"
+  PORT = "8080"
+
+[processes]
+  # The image's ENTRYPOINT is already /app/scripts/entrypoint.sh (see
+  # Dockerfile) — this value becomes its argument(s), not a second copy of
+  # the script path.
+  app = "web"
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  processes = ["app"]
+
+  # Always-on: cold starts on this Machine were ~13-18s regardless of VM
+  # size, image size/layer count, or region (iad vs dfw) — see the
+  # 2026-08-13 investigation in git history / CHANGELOG. That points to a
+  # fixed Fly platform boot cost outside our control, so autostop/autostart
+  # traded a small always-on compute cost for eliminating the wait instead.
+  auto_stop_machines = "off"
+  auto_start_machines = true
+  min_machines_running = 1
+
+  [[http_service.checks]]
+    grace_period = "10s"
+    interval = "15s"
+    method = "GET"
+    timeout = "5s"
+    path = "/health"
+
+[[vm]]
+  # Back at the smallest tier: the shared-cpu-2x/512mb bump tried earlier
+  # made no measurable difference to cold-start time (that turned out to
+  # be a fixed Fly platform cost, not CPU/memory contention — see the
+  # min_machines_running comment above), so there's no reason to pay for
+  # more than this while running always-on. Bump if steady-state memory
+  # pressure shows up under real traffic.
+  size = "shared-cpu-1x"
+  memory = "256mb"

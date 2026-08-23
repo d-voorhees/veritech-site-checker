@@ -1,0 +1,491 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>{{ report.report_name }} — {{ report.domain }}</title>
+<style>
+  :root { color-scheme: light; }
+  * { box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    color: #1a1f27;
+    background: #ffffff;
+    margin: 0;
+    padding: 2.5rem 3rem;
+    line-height: 1.5;
+    font-size: 14px;
+  }
+  h1, h2, h3 { font-weight: 600; letter-spacing: -0.01em; }
+  h1 { font-size: 1.5rem; margin: 0 0 0.25rem; }
+  h2 { font-size: 1.05rem; margin: 2rem 0 0.75rem; padding-bottom: 0.4rem; border-bottom: 1px solid #d9dde3; }
+  h3.subhead { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.04em; color: #5b6472; margin: 1.25rem 0 0.4rem; }
+  .eyebrow { color: #5b6472; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 0.5rem; }
+  .meta-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.75rem; margin: 1.25rem 0; }
+  .meta-item { border: 1px solid #d9dde3; border-radius: 6px; padding: 0.6rem 0.75rem; }
+  .meta-item .label { font-size: 0.7rem; text-transform: uppercase; color: #5b6472; letter-spacing: 0.05em; }
+  .meta-item .value { font-size: 0.9rem; margin-top: 0.15rem; word-break: break-word; }
+  .badge { display: inline-block; padding: 0.15rem 0.5rem; border-radius: 999px; font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.03em; }
+  .badge-high { background: #fbe1e1; color: #9c1f1f; }
+  .badge-medium { background: #fbeecb; color: #8a5a00; }
+  .badge-low { background: #e2e9fb; color: #29418a; }
+  .badge-info { background: #e6e9ec; color: #444c56; }
+  .badge-ok { background: #dcf3e3; color: #1f6b3a; }
+  .badge-status { background: #eef2f6; color: #33404d; }
+  .badge-flag { background: #fbe1e1; color: #9c1f1f; }
+  table { width: 100%; border-collapse: collapse; margin: 0.5rem 0; }
+  th, td { text-align: left; padding: 0.5rem 0.6rem; border-bottom: 1px solid #e5e8ec; font-size: 0.85rem; vertical-align: top; word-break: break-word; overflow-wrap: anywhere; }
+  th { font-size: 0.72rem; text-transform: uppercase; color: #5b6472; letter-spacing: 0.04em; }
+  .crawl-table { table-layout: fixed; }
+  .crawl-table col.col-url { width: 32%; }
+  .crawl-table col.col-status { width: 10%; }
+  .crawl-table col.col-title { width: 28%; }
+  .crawl-table col.col-canonical { width: 15%; }
+  .crawl-table col.col-h1 { width: 15%; }
+  .tech-table { table-layout: fixed; }
+  .tech-table col.col-tech { width: 30%; }
+  .tech-table col.col-method { width: 50%; }
+  .tech-table col.col-confidence { width: 20%; }
+  .finding { border: 1px solid #d9dde3; border-radius: 8px; padding: 0.9rem 1rem; margin-bottom: 0.75rem; page-break-inside: avoid; }
+  .finding-title-row { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+  .finding-title { font-weight: 600; font-size: 0.95rem; }
+  .finding-field { margin-top: 0.5rem; }
+  .finding-field .label { font-size: 0.72rem; text-transform: uppercase; color: #5b6472; letter-spacing: 0.04em; }
+  .finding-meta-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.75rem; }
+  details.evidence { margin-top: 0.6rem; background: #f7f8fa; border-radius: 6px; padding: 0.5rem 0.7rem; }
+  details.evidence summary { cursor: pointer; font-size: 0.8rem; font-weight: 600; color: #33404d; }
+  .evidence-item { margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px dashed #d9dde3; font-size: 0.8rem; }
+  .evidence-item:first-child { border-top: none; }
+  pre { white-space: pre-wrap; word-break: break-word; background: #fff; border: 1px solid #e5e8ec; padding: 0.5rem; border-radius: 4px; font-size: 0.72rem; }
+  .limitations li { margin-bottom: 0.4rem; font-size: 0.85rem; }
+  .footer-note { margin-top: 2.5rem; padding-top: 1rem; border-top: 1px solid #d9dde3; font-size: 0.75rem; color: #5b6472; }
+  @media print { body { padding: 0.5in; } }
+  .empty-note { color: #5b6472; font-size: 0.85rem; font-style: italic; }
+  .coverage-banner { border: 2px solid; border-radius: 8px; padding: 0.9rem 1rem; margin: 1rem 0; font-size: 0.9rem; }
+  .coverage-banner.blocked { border-color: #d64545; background: #fbe1e1; color: #7a1f1f; }
+  .coverage-banner.partial { border-color: #c98a1f; background: #fbeecb; color: #6b4a00; }
+  .coverage-banner .coverage-title { font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; font-size: 0.8rem; }
+  details.collapsible-table { border: 1px solid #d9dde3; border-radius: 8px; padding: 0.75rem 1rem; margin: 0.5rem 0; }
+  details.collapsible-table summary { cursor: pointer; font-weight: 600; font-size: 0.88rem; }
+  details.collapsible-table table { margin-top: 0.75rem; }
+  details.legend { border: 1px solid #d9dde3; border-radius: 8px; padding: 0.6rem 1rem; margin: 0.5rem 0 1rem; background: #f7f8fa; }
+  details.legend summary { cursor: pointer; font-weight: 600; font-size: 0.8rem; color: #33404d; }
+  details.legend p { font-size: 0.82rem; margin: 0.5rem 0; }
+  .legend-link { font-size: 0.8rem; }
+  .platform-callout { border: 1px solid #d9dde3; border-radius: 8px; padding: 0.75rem 1rem; margin: 0.5rem 0 1rem; background: #f7f8fa; }
+  .platform-callout .label { font-size: 0.7rem; text-transform: uppercase; color: #5b6472; letter-spacing: 0.05em; }
+  .platform-callout .value { font-size: 1rem; font-weight: 600; margin-top: 0.15rem; }
+  .platform-callout .detail { font-size: 0.78rem; color: #5b6472; margin-top: 0.3rem; }
+  .redirect-chain { list-style: none; margin: 0.4rem 0 0; padding: 0; font-size: 0.85rem; }
+  .redirect-chain li { padding: 0.3rem 0.5rem; border-left: 2px solid #d9dde3; margin-bottom: 0.2rem; }
+</style>
+</head>
+<body>
+
+{% macro dt(value) -%}
+{% if value %}<span class="dt" data-utc="{{ value.isoformat() }}">{{ value.strftime('%Y-%m-%d %H:%M UTC') }}</span>{% else %}—{% endif %}
+{%- endmacro %}
+
+<div class="eyebrow">{{ report.parent_brand }}</div>
+<h1>{{ report.report_name }}</h1>
+<div class="eyebrow">Prepared for review of {{ report.domain }}</div>
+
+<div class="meta-grid">
+  <div class="meta-item"><div class="label">Domain</div><div class="value">{{ report.domain }}</div></div>
+  <div class="meta-item"><div class="label">Scan status</div><div class="value">{{ report.status }}</div></div>
+  <div class="meta-item"><div class="label">Pages scanned</div><div class="value">{{ report.pages_scanned }} (max {{ report.max_pages }})</div></div>
+  <div class="meta-item"><div class="label">Authorization confirmed</div><div class="value">{{ dt(report.authorization_confirmed_at) }}</div></div>
+  <div class="meta-item"><div class="label">Started</div><div class="value">{{ dt(report.started_at) }}</div></div>
+  <div class="meta-item"><div class="label">Completed</div><div class="value">{{ dt(report.completed_at) }}</div></div>
+  <div class="meta-item"><div class="label">Report generated</div><div class="value">{{ dt(report.generated_at) }}</div></div>
+  <div class="meta-item"><div class="label">Acquisition notes</div><div class="value">{{ report.notes or "—" }}</div></div>
+</div>
+
+{% if report.is_demo %}
+<div class="meta-item" style="border-color:#8a5a00; background:#fbeecb; margin-bottom:1rem;">
+  <div class="label">Synthetic demo data</div>
+  <div class="value">This scan uses fabricated fixture data for demonstration purposes only. It does not reflect a real assessment.</div>
+</div>
+{% endif %}
+
+{% if report.coverage.state != "full" %}
+<div class="coverage-banner {{ report.coverage.state }}">
+  <div class="coverage-title">{{ "Scan blocked" if report.coverage.state == "blocked" else "Partial scan coverage" }}</div>
+  <div>{{ report.coverage.message }}</div>
+  {% if report.coverage.detail %}<div style="margin-top:0.4rem;">{{ report.coverage.detail }}</div>{% endif %}
+</div>
+{% endif %}
+
+<h2>Risk summary</h2>
+<div class="meta-grid" style="grid-template-columns: repeat(4, 1fr);">
+  <div class="meta-item"><div class="label">High</div><div class="value"><span class="badge badge-high">{{ report.severity_counts.high }}</span></div></div>
+  <div class="meta-item"><div class="label">Medium</div><div class="value"><span class="badge badge-medium">{{ report.severity_counts.medium }}</span></div></div>
+  <div class="meta-item"><div class="label">Low</div><div class="value"><span class="badge badge-low">{{ report.severity_counts.low }}</span></div></div>
+  <div class="meta-item"><div class="label">Info</div><div class="value"><span class="badge badge-info">{{ report.severity_counts.info }}</span></div></div>
+</div>
+
+<details class="collapsible-table">
+  <summary>{{ report.rules_checked.total_count }} rules checked, {{ report.rules_checked.fired_count }} raised a finding or observation — expand for the full list</summary>
+  <p style="font-size:0.82rem; color:#5b6472;">Every rule ran, even the ones that don't appear in the risk register below; those simply found nothing to flag. A green "positive" row is a favorable observation (e.g. DKIM signing found) — it's evidence, not a risk, so it doesn't appear in the register either.</p>
+  <table class="tech-table">
+    <colgroup>
+      <col style="width:18%"><col style="width:37%"><col style="width:45%">
+    </colgroup>
+    <thead><tr><th>Category</th><th>Check</th><th>Outcome</th></tr></thead>
+    <tbody>
+    {% for r in report.rules_checked.rules %}
+      <tr>
+        <td>{{ r.category|replace("_", " ") }}</td>
+        <td>{{ r.check }}</td>
+        <td>
+          {% if r.fired and r.positive_observation %}
+            <span class="badge badge-ok">positive</span> {{ r.title }}
+          {% elif r.fired %}
+            <span class="badge badge-{{ r.severity }}">{{ r.severity }}</span> {{ r.title }}
+          {% else %}
+            <span style="color:#5b6472;">OK</span>
+          {% endif %}
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</details>
+
+<h2>Prioritized risk register</h2>
+<p class="legend-link"><a href="#legend">What do severity, confidence, dollar impact, and remediation timing mean?</a></p>
+<details class="legend" id="legend">
+  <summary>Severity, confidence, dollar impact &amp; remediation timing — legend</summary>
+  <p><strong>Severity</strong> (high / medium / low / info) is how much this finding matters on its own if nothing else changes — high means a real, current problem (e.g. no HTTPS); info means worth knowing but not urgent on its own.</p>
+  <p><strong>Confidence</strong> (high / medium / low) is how sure this scan is that the finding is real, given what it could observe — high means the evidence is direct and unambiguous; lower confidence usually means the check is a best-effort probe (e.g. DKIM selector discovery only checks common defaults) rather than an exhaustive one.</p>
+  <p><strong>Dollar impact</strong> ($ / $$ / $$$) is a rough, rule-assigned band for how much this is worth caring about financially — never an exact number, and not something a reader chooses. For a few findings (domain/TLS expiration) the band reflects the risk of inaction rather than the small direct fix cost, because losing the domain or certificate would be severe even though renewing it is cheap.</p>
+  <p><strong>Remediation timing</strong> (30-day / 60-day / 90-day / longer-term) is the rule's suggested urgency for addressing the finding, also set by the rule itself.</p>
+</details>
+{% if report.findings %}
+  {% for f in report.findings %}
+  <div class="finding">
+    <div class="finding-title-row">
+      <span class="badge badge-{{ f.severity }}">{{ f.severity }}</span>
+      <span class="badge badge-status">confidence: {{ f.confidence }}</span>
+      {% if f.dollar_impact != "n/a" %}<span class="badge badge-status">impact: {{ f.dollar_impact }}</span>{% endif %}
+      {% if f.remediation_timing != "n/a" %}<span class="badge badge-status">{{ f.remediation_timing }}</span>{% endif %}
+      <span class="finding-title">{{ f.title }}</span>
+    </div>
+    <div class="finding-field"><div class="label">Category</div><div>{{ f.category }}</div></div>
+    <div class="finding-field"><div class="label">Impact (observation → interpretation)</div><div>{{ f.impact }}</div></div>
+    <div class="finding-field"><div class="label">Recommended next step</div><div>{{ f.recommended_next_step }}</div></div>
+    <details class="evidence">
+      <summary>Linked evidence ({{ f.evidence|length }})</summary>
+      {% for e in f.evidence %}
+      <div class="evidence-item">
+        <div><strong>{{ e.category }}</strong> — {{ e.source_type }} — confidence: {{ e.confidence }}</div>
+        <div>{{ e.human_readable_summary }}</div>
+        <div style="color:#5b6472; font-size:0.72rem;">Source: {{ e.source_url_or_identifier }} · captured {{ dt(e.captured_at) }}</div>
+      </div>
+      {% endfor %}
+    </details>
+  </div>
+  {% endfor %}
+{% else %}
+  <p class="empty-note">No findings were raised by the deterministic rules engine for the evidence collected in this scan.</p>
+{% endif %}
+
+<h2>Business continuity</h2>
+<p style="font-size:0.85rem; color:#5b6472;">Will this site still be here in 60 days? Domain registration, TLS certificate, and how a visitor actually reaches the homepage.</p>
+<h3 class="subhead">Domain and certificate</h3>
+<table>
+  <tbody>
+    {% if report.domain_registration and report.domain_registration.expiration_date %}
+    <tr><td>Domain registration</td><td>Registrar: {{ report.domain_registration.registrar or "unknown" }} · expires {{ report.domain_registration.expiration_date }}{% if report.domain_registration.days_until_expiration is not none %} ({{ report.domain_registration.days_until_expiration }} day(s)){% endif %}</td></tr>
+    {% else %}
+    <tr><td>Domain registration</td><td class="empty-note">Not available for this scan.</td></tr>
+    {% endif %}
+    {% if report.tls and report.tls.not_after %}
+    <tr><td>TLS certificate issuer</td><td>{{ report.tls.issuer or "unknown" }}</td></tr>
+    <tr><td>TLS certificate expires</td><td>{{ report.tls.not_after }}{% if report.tls.days_until_expiry is not none %} ({{ report.tls.days_until_expiry }} day(s)){% endif %}</td></tr>
+    {% else %}
+    <tr><td>TLS certificate</td><td class="empty-note">Not available for this scan.</td></tr>
+    {% endif %}
+  </tbody>
+</table>
+
+<h3 class="subhead">Availability</h3>
+{% if report.http_security %}
+<table>
+  <tbody>
+    <tr><td>Final URL</td><td>{{ report.http_security.final_url }}</td></tr>
+    <tr><td>Status code</td><td>{{ report.http_security.status_code }}</td></tr>
+    <tr><td>HTTPS</td><td>{{ "Yes" if report.http_security.is_https else "No" }}</td></tr>
+  </tbody>
+</table>
+<p style="margin-top:0.75rem; font-size:0.85rem;">
+  <strong>Redirect chain</strong> ({{ report.http_security.redirect_hop_count }} hop(s))
+  {% if report.http_security.redirect_worth_flagging %}<span class="badge badge-flag">worth a look</span>{% endif %}
+</p>
+{% if report.http_security.redirect_chain %}
+<ul class="redirect-chain">
+  {% for hop in report.http_security.redirect_chain %}
+  <li>{{ hop.from_url }} <strong>&rarr; {{ hop.status_code }} &rarr;</strong> {{ hop.to_url }}</li>
+  {% endfor %}
+  <li>{{ report.http_security.final_url }} <span style="color:#5b6472;">(final)</span></li>
+</ul>
+{% else %}
+<p class="empty-note">No redirects — the requested URL was served directly.</p>
+{% endif %}
+{% if report.http_security.redirect_mixes_schemes %}
+<p style="font-size:0.8rem; color:#9c1f1f;">This chain crosses http/https — worth confirming every intermediate hop is intentional.</p>
+{% endif %}
+{% else %}
+<p class="empty-note">No HTTP observation was recorded.</p>
+{% endif %}
+
+<h2>Platform and stack</h2>
+<p style="font-size:0.85rem; color:#5b6472;">What is this business built on, and what would a buyer be inheriting?</p>
+{% set platform = report.technology.platform %}
+{% if platform %}
+<div class="platform-callout">
+  <div class="label">Platform</div>
+  <div class="value">{{ platform.name }}</div>
+  <div class="detail">{{ platform.detection_method }}{% if platform.heuristic %} (inferred from crawled URL patterns, not an explicit platform marker){% endif %}</div>
+</div>
+{% else %}
+<p class="empty-note">No CMS, ecommerce platform, website builder, headless CMS, or static-site framework could be identified from the evidence collected.</p>
+{% endif %}
+
+{% if report.http_security and report.http_security.hosting_fingerprint %}
+<h3 class="subhead">Hosting fingerprint</h3>
+<table>
+  <tbody>
+  {% for label, value in report.http_security.hosting_fingerprint.items() %}
+    <tr><td>{{ label }}</td><td>{{ value }}</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+
+<h3 class="subhead">Technology and dependencies</h3>
+{% if report.technology.technologies %}
+{% for category, techs in report.technology.technologies|groupby('category') %}
+<h3 class="subhead">{{ category|replace("_", " ") }}</h3>
+<table class="tech-table">
+  <colgroup>
+    <col class="col-tech"><col class="col-method"><col class="col-confidence">
+  </colgroup>
+  <thead><tr><th>Technology</th><th>Detection method</th><th>Confidence</th></tr></thead>
+  <tbody>
+  {% for t in techs %}
+    <tr><td>{{ t.technology_name }}</td><td>{{ t.detection_method }}</td><td>{{ t.confidence }}</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endfor %}
+{% else %}
+<p class="empty-note">No technologies were positively identified by local rules-based detection.</p>
+{% endif %}
+
+<h3 class="subhead">Third-party dependencies</h3>
+{% if report.third_party_dependencies.domains %}
+<p>{{ report.third_party_dependencies.hostname_count }} distinct third-party request domain(s) observed while rendering the homepage.</p>
+<table class="tech-table">
+  <colgroup>
+    <col style="width:28%"><col style="width:22%"><col style="width:15%"><col style="width:10%"><col style="width:25%">
+  </colgroup>
+  <thead><tr><th>Hostname</th><th>Vendor</th><th>Category</th><th>Requests</th><th>Classification method</th></tr></thead>
+  <tbody>
+  {% for d in report.third_party_dependencies.domains %}
+    <tr><td>{{ d.hostname }}</td><td>{{ d.vendor_name or "—" }}</td><td>{{ d.category|replace("_", " ") }}</td><td>{{ d.request_count }}</td><td>{{ d.classification_method }}</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p class="empty-note">No third-party request domains were observed while rendering the homepage.</p>
+{% endif %}
+
+<h3 class="subhead">Platform exposure</h3>
+{% if report.platform_exposure and (report.platform_exposure.xmlrpc or report.platform_exposure.wp_json) %}
+<table>
+  <tbody>
+    <tr><td>xmlrpc.php</td><td>{% if report.platform_exposure.xmlrpc %}HTTP {{ report.platform_exposure.xmlrpc.status_code or "error" }}{% else %}—{% endif %}</td></tr>
+    <tr><td>wp-json REST API root</td><td>{% if report.platform_exposure.wp_json %}HTTP {{ report.platform_exposure.wp_json.status_code or "error" }}{% else %}—{% endif %}</td></tr>
+  </tbody>
+</table>
+{% else %}
+<p class="empty-note">No platform-specific exposure probes recorded for this scan.</p>
+{% endif %}
+
+<h2>HTTP and security headers</h2>
+{% if report.http_security %}
+<table>
+  <tbody>
+    <tr><td>Strict-Transport-Security</td><td>{{ report.http_security.strict_transport_security or "not present" }}</td></tr>
+    <tr><td>Content-Security-Policy</td><td>{{ report.http_security.content_security_policy or "not present" }}</td></tr>
+    <tr><td>X-Content-Type-Options</td><td>{{ report.http_security.x_content_type_options or "not present" }}</td></tr>
+    <tr><td>X-Frame-Options</td><td>{{ report.http_security.x_frame_options or "not present" }}</td></tr>
+    <tr><td>Referrer-Policy</td><td>{{ report.http_security.referrer_policy or "not present" }}</td></tr>
+    <tr><td>Mixed content (HTTP subresources on HTTPS page)</td><td>{{ report.http_security.mixed_content_count or "none observed" }}</td></tr>
+  </tbody>
+</table>
+{% else %}
+<p class="empty-note">No HTTP observation was recorded.</p>
+{% endif %}
+
+<h2>Crawl and indexability</h2>
+<p>{{ report.crawl_indexability.pages_scanned }} pages scanned; {{ report.crawl_indexability.error_page_count }} returned a 4xx/5xx status.</p>
+<table class="crawl-table">
+  <colgroup>
+    <col class="col-url"><col class="col-status"><col class="col-title"><col class="col-canonical"><col class="col-h1">
+  </colgroup>
+  <thead><tr><th>URL</th><th>Status</th><th>Title</th><th>Canonical</th><th>H1 count</th></tr></thead>
+  <tbody>
+  {% for p in report.crawl_indexability.pages %}
+    <tr><td>{{ p.url }}</td><td>{{ p.status_code or "error" }}</td><td>{{ p.title or "—" }}</td><td>{{ "yes" if p.canonical_url else "no" }}</td><td>{{ p.h1_count }}</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+
+{% set sc = report.crawl_indexability.sitemap_check %}
+<h3 class="subhead">Checked against robots.txt and sitemap</h3>
+<table>
+  <tbody>
+    <tr><td>Sitemap URLs declared</td><td>{{ sc.sitemap_declared_count }} URL(s) across {{ sc.sitemap_file_count }} sitemap file(s)</td></tr>
+    <tr><td>Robots.txt Disallow rules (User-agent: *)</td><td>{% if sc.disallow_rules %}{{ sc.disallow_rules|join(", ") }}{% else %}No Disallow rules declared{% endif %}</td></tr>
+    {% if sc.lastmod_count %}
+    <tr><td>Sitemap freshness</td><td>Newest: {{ sc.newest_lastmod }} · Oldest: {{ sc.oldest_lastmod }} (across {{ sc.lastmod_count }} entr{{ "y" if sc.lastmod_count == 1 else "ies" }} with a &lt;lastmod&gt; date)</td></tr>
+    {% endif %}
+  </tbody>
+</table>
+
+<p style="margin-top:1rem;"><strong>Crawled but not declared in sitemap</strong> ({{ sc.crawled_not_in_sitemap_count }})<br>
+<span style="color:#5b6472; font-size:0.8rem;">Pages this scan reached that the sitemap doesn't list — often fine (new content, legal pages), but worth confirming they're intentional.</span></p>
+{% if sc.crawled_not_in_sitemap_sample %}
+<ul style="font-size:0.85rem;">
+  {% for u in sc.crawled_not_in_sitemap_sample %}<li>{{ u }}</li>{% endfor %}
+  {% if sc.crawled_not_in_sitemap_count > sc.crawled_not_in_sitemap_sample|length %}<li>… and {{ sc.crawled_not_in_sitemap_count - sc.crawled_not_in_sitemap_sample|length }} more</li>{% endif %}
+</ul>
+{% else %}
+<p class="empty-note">None — every reachable page this scan crawled is also declared in the sitemap.</p>
+{% endif %}
+
+<p style="margin-top:1rem;"><strong>Declared in sitemap but not reached by this crawl</strong> ({{ sc.sitemap_not_crawled_count }})<br>
+<span style="color:#5b6472; font-size:0.8rem;">This scan is bounded to {{ report.max_pages }} pages, so this may just reflect that budget rather than a site defect.</span></p>
+{% if sc.sitemap_not_crawled_sample %}
+<ul style="font-size:0.85rem;">
+  {% for u in sc.sitemap_not_crawled_sample %}<li>{{ u }}</li>{% endfor %}
+  {% if sc.sitemap_not_crawled_count > sc.sitemap_not_crawled_sample|length %}<li>… and {{ sc.sitemap_not_crawled_count - sc.sitemap_not_crawled_sample|length }} more</li>{% endif %}
+</ul>
+{% else %}
+<p class="empty-note">None — every sitemap URL within this comparison was reached by the crawl.</p>
+{% endif %}
+
+{% if sc.disallow_rules %}
+<p style="margin-top:1rem;"><strong>Crawled despite matching a robots.txt Disallow rule</strong> ({{ sc.crawled_but_disallowed_count }})<br>
+<span style="color:#5b6472; font-size:0.8rem;">Informational only — this scan does not enforce robots.txt, so this shows where the site's stated crawl preferences and its actual reachable content diverge.</span></p>
+{% if sc.crawled_but_disallowed_sample %}
+<ul style="font-size:0.85rem;">
+  {% for u in sc.crawled_but_disallowed_sample %}<li>{{ u }}</li>{% endfor %}
+  {% if sc.crawled_but_disallowed_count > sc.crawled_but_disallowed_sample|length %}<li>… and {{ sc.crawled_but_disallowed_count - sc.crawled_but_disallowed_sample|length }} more</li>{% endif %}
+</ul>
+{% else %}
+<p class="empty-note">None — no crawled page matched a Disallow rule.</p>
+{% endif %}
+{% endif %}
+
+<h2>Email posture</h2>
+<table>
+  <thead><tr><th>Record</th><th>Values / status</th></tr></thead>
+  <tbody>
+  {% for r in report.dns_email.records %}
+    <tr><td>{{ r.record_type }}</td><td>{% if r.lookup_successful %}{{ r.record_values|join(", ") if r.record_values else "none" }}{% else %}lookup failed: {{ r.error_message }}{% endif %}</td></tr>
+  {% endfor %}
+  {% if report.dns_email.spf %}
+    <tr><td>SPF</td><td>{{ report.dns_email.spf.record or "not present" }}</td></tr>
+  {% endif %}
+  {% if report.dns_email.dmarc %}
+    <tr><td>DMARC</td><td>{{ report.dns_email.dmarc.record or "not present" }} {% if report.dns_email.dmarc.policy %}(policy: {{ report.dns_email.dmarc.policy }}){% endif %}</td></tr>
+  {% endif %}
+    <tr><td>DKIM</td><td>
+      {% if report.dns_email.dkim_selectors_found %}
+        found under selector{{ "s" if report.dns_email.dkim_selectors_found|length > 1 else "" }}: {{ report.dns_email.dkim_selectors_found|join(", ") }}
+      {% else %}
+        not found under any of {{ report.dns_email.dkim_probed_count }} commonly probed selectors (not proof of absence — a custom selector would not be detected)
+      {% endif %}
+    </td></tr>
+  </tbody>
+</table>
+
+<h2>Page speed performance</h2>
+{% if report.performance %}
+<table>
+  <tbody>
+    <tr><td>Provider</td><td>{{ report.performance.provider }}{% if not report.performance.configured %} (external provider not configured — local measurements only){% endif %}</td></tr>
+    <tr><td>Homepage response time</td><td>{{ report.performance.response_duration_ms }} ms</td></tr>
+    <tr><td>HTML payload size</td><td>{{ report.performance.html_bytes }} bytes</td></tr>
+    <tr><td>Third-party domains</td><td>{{ report.performance.third_party_domain_count }}</td></tr>
+    <tr><td>JS resource requests</td><td>{{ report.performance.js_resource_count }}</td></tr>
+  </tbody>
+</table>
+{% if report.performance.configured %}
+<table class="tech-table">
+  <colgroup>
+    <col style="width:40%"><col style="width:30%"><col style="width:30%">
+  </colgroup>
+  <thead><tr><th>Google PageSpeed Insights</th><th>Desktop</th><th>Mobile</th></tr></thead>
+  <tbody>
+    <tr><td>Performance score</td><td>{{ report.performance.desktop.performance_score if report.performance.desktop.performance_score is not none else "—" }}</td><td>{{ report.performance.mobile.performance_score if report.performance.mobile.performance_score is not none else "—" }}</td></tr>
+    <tr><td>Accessibility score</td><td>{{ report.performance.desktop.accessibility_score if report.performance.desktop.accessibility_score is not none else "—" }}</td><td>{{ report.performance.mobile.accessibility_score if report.performance.mobile.accessibility_score is not none else "—" }}</td></tr>
+    <tr><td>Best practices score</td><td>{{ report.performance.desktop.best_practices_score if report.performance.desktop.best_practices_score is not none else "—" }}</td><td>{{ report.performance.mobile.best_practices_score if report.performance.mobile.best_practices_score is not none else "—" }}</td></tr>
+    <tr><td>SEO score</td><td>{{ report.performance.desktop.seo_score if report.performance.desktop.seo_score is not none else "—" }}</td><td>{{ report.performance.mobile.seo_score if report.performance.mobile.seo_score is not none else "—" }}</td></tr>
+    <tr><td>LCP</td><td>{{ "%.3f"|format(report.performance.desktop.lcp_ms) ~ "ms" if report.performance.desktop.lcp_ms is not none else "—" }}</td><td>{{ "%.3f"|format(report.performance.mobile.lcp_ms) ~ "ms" if report.performance.mobile.lcp_ms is not none else "—" }}</td></tr>
+    <tr><td>FCP</td><td>{{ "%.3f"|format(report.performance.desktop.fcp_ms) ~ "ms" if report.performance.desktop.fcp_ms is not none else "—" }}</td><td>{{ "%.3f"|format(report.performance.mobile.fcp_ms) ~ "ms" if report.performance.mobile.fcp_ms is not none else "—" }}</td></tr>
+    <tr><td>TTFB</td><td>{{ report.performance.desktop.ttfb_ms }}ms</td><td>{{ report.performance.mobile.ttfb_ms }}ms</td></tr>
+  </tbody>
+</table>
+<p style="font-size:0.78rem; color:#5b6472; margin-top:0.4rem;">TTFB above is PageSpeed Insights' "server response time" for the tested resource. A very low (near-zero) value usually means the response was served from a CDN edge/cache rather than indicating a measurement error.</p>
+{% endif %}
+{% else %}
+<p class="empty-note">No performance observation was recorded.</p>
+{% endif %}
+
+<h2>Accessibility (homepage)</h2>
+{% if report.accessibility and report.accessibility.image_count is defined %}
+<p>A static pass over the rendered homepage — alt text, form labels, and known overlay-widget scripts. Not a substitute for a full manual/automated accessibility audit.</p>
+<table>
+  <tbody>
+    <tr><td>Images with alt text</td><td>{{ report.accessibility.image_count - report.accessibility.images_missing_alt_count }} of {{ report.accessibility.image_count }}
+      {% if report.accessibility.images_missing_alt_count > 0 %}<span class="badge badge-high">{{ report.accessibility.images_missing_alt_count }} missing — needs fix</span>{% endif %}</td></tr>
+    <tr><td>Form fields with labels</td><td>{{ report.accessibility.labelable_field_count - report.accessibility.fields_missing_labels_count }} of {{ report.accessibility.labelable_field_count }}
+      {% if report.accessibility.fields_missing_labels_count > 0 %}<span class="badge badge-high">{{ report.accessibility.fields_missing_labels_count }} missing — needs fix</span>{% endif %}</td></tr>
+    <tr><td>Accessibility overlay widget</td><td>{{ report.accessibility.overlay_widget_vendor or "None detected" }}</td></tr>
+  </tbody>
+</table>
+{% else %}
+<p class="empty-note">No accessibility data was recorded for this scan.</p>
+{% endif %}
+
+<h2>Known limitations of this scan</h2>
+<p>{{ report.scope_statement }}</p>
+<ul class="limitations">
+  {% for l in report.limitations %}
+  <li>{% if l.task_name %}<strong>{{ l.task_name|replace("_", " ") }}:</strong> {% endif %}{{ l.message }}</li>
+  {% endfor %}
+</ul>
+
+<div class="footer-note">
+  {{ report.product_name }} is a technical pre-screen produced by {{ report.parent_brand }}. It converts
+  bounded public technical evidence into a prioritized risk register and recommended next steps. It is not a
+  vulnerability scan, penetration test, or legal/financial audit, and findings described as "hardening
+  opportunities" are not confirmed vulnerabilities. Generated {{ dt(report.generated_at) }}.
+</div>
+
+{% if not for_email %}
+<script>
+  document.querySelectorAll(".dt").forEach(function (el) {
+    var parsed = new Date(el.dataset.utc);
+    if (!isNaN(parsed.getTime())) {
+      el.textContent = parsed.toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
+    }
+  });
+</script>
+{% endif %}
+
+</body>
+</html>

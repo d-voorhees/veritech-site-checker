@@ -1,0 +1,144 @@
+name: Deploy
+
+# Pushes to main run the full test suite, then deploy to Fly.io only if it
+# passes, then run `./scripts/migrate-fly.sh` (alembic upgrade head, via a
+# one-off Fly Machine using the image just deployed) — see README.md's
+# "Migrations" section.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    # This job normally finishes in under 10 minutes end to end. A hard
+    # ceiling here means a stuck step (e.g. a hung apt mirror, as happened
+    # on 2026-08-18) fails loudly within a bounded time instead of silently
+    # consuming 20-30+ minutes before anyone notices.
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: veritech_scan
+          POSTGRES_PASSWORD: test-password
+          POSTGRES_DB: veritech_scan_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: postgresql+psycopg://veritech_scan:test-password@localhost:5432/veritech_scan_test
+      JWT_SECRET: ci-test-secret-do-not-use-in-production
+      INITIAL_ADMIN_EMAIL: admin@example.com
+      INITIAL_ADMIN_PASSWORD: test-password-123
+      ARTIFACT_STORAGE_LOCAL_PATH: /tmp/veritech-scan-test-artifacts
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # GitHub's Ubuntu runners default to an Azure-hosted apt mirror
+      # (azure.archive.ubuntu.com) that's known to intermittently hang for
+      # 20+ minutes — hit this on 2026-08-18, stalling the very next apt-get
+      # call (`playwright install --with-deps` below). Point at the
+      # standard Ubuntu mirror instead, which doesn't have this problem.
+      - name: Work around flaky default Ubuntu apt mirror on GitHub runners
+        run: |
+          sudo sed -i 's|azure.archive.ubuntu.com|archive.ubuntu.com|g' \
+            /etc/apt/sources.list /etc/apt/sources.list.d/*.sources 2>/dev/null || true
+
+      - name: Configure git auth for the private rule-catalog dependency
+        run: |
+          git config --global url."https://x-access-token:${RULES_REPO_TOKEN}@github.com/".insteadOf "https://github.com/"
+        env:
+          RULES_REPO_TOKEN: ${{ secrets.RULES_REPO_TOKEN }}
+
+      # Caches the downloaded Chromium binary itself (not the apt-installed
+      # system libraries) so most runs skip that download over the network
+      # entirely — only a cache miss (Playwright version bump) re-downloads
+      # it. Keyed on requirements.txt since that's what pins the playwright
+      # version.
+      - name: Cache Playwright browser binary
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-chromium-${{ runner.os }}-${{ hashFiles('apps/api/requirements.txt') }}
+
+      - name: Install backend dependencies
+        working-directory: apps/api
+        # 5 minutes is generous for this step even on a fully cold cache
+        # (normally well under 2) — this is the step that hung for 20+
+        # minutes on a bad apt mirror on 2026-08-18. A hard timeout here
+        # means that failure mode now fails loudly in 5 minutes, not
+        # silently in 20-30.
+        timeout-minutes: 5
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-dev.txt
+          playwright install --with-deps chromium
+
+      - name: Lint backend
+        working-directory: apps/api
+        run: |
+          python -m ruff check app
+          python -m mypy app --ignore-missing-imports || true
+
+      - name: Backend tests
+        run: python -m pytest -q
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+
+      - name: Install frontend dependencies
+        working-directory: apps/web
+        run: npm ci
+
+      - name: Lint frontend
+        working-directory: apps/web
+        run: npm run lint
+
+      - name: Typecheck frontend
+        working-directory: apps/web
+        run: npm run typecheck
+
+      - name: Frontend tests
+        working-directory: apps/web
+        run: npm run test --if-present
+
+  deploy:
+    needs: test
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    # Normally ~2-10 minutes (two remote Fly builds + migrations). Same
+    # reasoning as the test job's timeout above.
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+      - name: Deploy to Fly.io
+        run: >
+          flyctl deploy --remote-only --app veritech-scan
+          --build-secret rules_token="$RULES_REPO_TOKEN"
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+          RULES_REPO_TOKEN: ${{ secrets.RULES_REPO_TOKEN }}
+      - name: Run database migrations
+        run: ./scripts/migrate-fly.sh
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+          FLY_APP_NAME: veritech-scan

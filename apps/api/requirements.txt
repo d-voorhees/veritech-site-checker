@@ -1,0 +1,32 @@
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+gunicorn==23.0.0
+sqlalchemy==2.0.36
+alembic==1.14.0
+pydantic==2.10.4
+pydantic[email]==2.10.4
+pydantic-settings==2.7.1
+psycopg[binary]==3.2.3
+httpx==0.28.1
+dnspython==2.7.0
+selectolax==0.3.27
+beautifulsoup4==4.12.3
+lxml==5.3.0
+playwright==1.49.1
+pyjwt==2.10.1
+bcrypt==4.2.1
+python-multipart==0.0.20
+structlog==24.4.0
+tenacity==9.0.0
+jinja2==3.1.5
+
+# Private: the deterministic rule catalog (apps/api/app/rules/ imports this
+# — see docs/rules-engine.md). Not on PyPI. Pinned to a tag, never a branch,
+# so a deploy is always reproducible — bump the tag here (and re-deploy) any
+# time veritech-scan-rules changes. This plain https:// URL has no
+# credential embedded in it (safe to keep in a public repo) — it resolves
+# via whatever GitHub auth is already configured in each environment: your
+# own git credential helper locally, a fine-grained PAT rewritten in via
+# `git config --global url.insteadOf` in CI and in the Docker build (see
+# docs/rules-engine.md's "Private rule catalog" section).
+veritech-scan-rules @ git+https://github.com/d-voorhees/veritech-scan-rules.git@v0.1.0
