@@ -11,14 +11,13 @@ It answers one practical question for a prospective buyer of a web-based busines
 Current version: v1.10. Release history in [CHANGELOG.md](CHANGELOG.md). Build story: [A Technical Due Diligence Scanner for Web-Business Buyers](https://dvoorhees.com/2026/08/15/building-a-technical-due-diligence-scanner-for-web-business-buyers/). Live app: [sitechecker.veritechdiligence.com](https://sitechecker.veritechdiligence.com).
 
 **At a glance**
-- Stack: Next.js, FastAPI, PostgreSQL (Neon), Playwright/Chromium, Fly.io Machines
+- Stack: Next.js, FastAPI, PostgreSQL (Neon), Playwright/Chromium, Fly.io Machines  
 - Rules engine: 26 versioned, deterministic rules; zero LLM involvement in findings
 - Compute model: an on-demand Fly Machine per scan, no persistent worker or queue
 - Turnaround: a scan returns a full report in minutes
 
 ## What it does
-
-Findings come from a deterministic, versioned rules engine reading a normalized evidence layer, not from a language model. The engine currently runs 26 rules across DNS and email posture, HTTP and security headers, crawl and indexability, technology and dependency exposure, TLS and domain registration, performance, and accessibility. Every rule's outcome shows in the report, not only the ones that fired, so a buyer can see what was checked as well as what was found.
+Findings come from a deterministic, versioned rules engine reading evidence, NOT from a language model. The engine currently runs 26 rules across DNS and email posture, HTTP and security headers, crawl and indexability, technology and dependency exposure, TLS and domain registration, performance, and accessibility. Every rule's outcome shows in the report, not only the ones that fired, so a buyer can see what was checked as well as what was found.
 
 ## Architecture: two Fly Machine roles, one source of truth
 
