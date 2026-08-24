@@ -319,6 +319,7 @@ def ensure_demo_scan(db, owner: User) -> ScanRequest:
             "confidence": "high", "title": "No DMARC record found",
             "impact": "[DEMO] Observation: no _dmarc TXT record found. Interpretation: no policy instruction for unauthenticated mail.",
             "recommended_next_step": "Inventory sending services before publishing a DMARC monitoring policy.",
+            "dollar_impact": "$$", "remediation_timing": "60-day",
             "evidence": [email_evidence],
         },
         {
@@ -326,6 +327,7 @@ def ensure_demo_scan(db, owner: User) -> ScanRequest:
             "confidence": "high", "title": "No Content-Security-Policy header (hardening opportunity)",
             "impact": "[DEMO] Observation: homepage response has no CSP header. This is a hardening opportunity, not a confirmed vulnerability.",
             "recommended_next_step": "Evaluate introducing a CSP as part of a broader hardening pass.",
+            "dollar_impact": "$", "remediation_timing": "longer-term",
             "evidence": [http_evidence],
         },
         {
@@ -333,6 +335,7 @@ def ensure_demo_scan(db, owner: User) -> ScanRequest:
             "confidence": "high", "title": "Homepage has no canonical tag",
             "impact": "[DEMO] Observation: no canonical tag on the homepage.",
             "recommended_next_step": "Add a self-referencing canonical tag.",
+            "dollar_impact": "$", "remediation_timing": "90-day",
             "evidence": [homepage_evidence],
         },
         {
@@ -340,6 +343,7 @@ def ensure_demo_scan(db, owner: User) -> ScanRequest:
             "confidence": "high", "title": "Homepage missing meta description",
             "impact": "[DEMO] Observation: no meta description tag on the homepage.",
             "recommended_next_step": "Author a concise, unique meta description.",
+            "dollar_impact": "$", "remediation_timing": "90-day",
             "evidence": [homepage_evidence],
         },
         {
@@ -347,6 +351,7 @@ def ensure_demo_scan(db, owner: User) -> ScanRequest:
             "confidence": "medium", "title": "12 third-party request domains observed on the homepage",
             "impact": "[DEMO] Observation: 12 distinct third-party domains requested by the homepage.",
             "recommended_next_step": "Review each dependency for ownership, purpose, and privacy posture.",
+            "dollar_impact": "$$", "remediation_timing": "60-day",
             "evidence": [perf_evidence],
         },
         {
@@ -354,6 +359,7 @@ def ensure_demo_scan(db, owner: User) -> ScanRequest:
             "confidence": "high", "title": "1 crawled page returned a 4xx/5xx status",
             "impact": "[DEMO] Observation: /careers returned HTTP 404 during the crawl.",
             "recommended_next_step": "Investigate broken links found during the crawl.",
+            "dollar_impact": "$$", "remediation_timing": "60-day",
             "evidence": [crawl_evidence],
         },
     ]
@@ -376,6 +382,7 @@ def ensure_demo_scan(db, owner: User) -> ScanRequest:
             scan_request_id=scan.id, rule_id=rule_row.id, rule_version=1, category=fd["category"],
             severity=fd["severity"], confidence=fd["confidence"], title=fd["title"], impact=fd["impact"],
             recommended_next_step=fd["recommended_next_step"],
+            dollar_impact=fd["dollar_impact"], remediation_timing=fd["remediation_timing"],
         )
         db.add(finding)
         db.flush()
