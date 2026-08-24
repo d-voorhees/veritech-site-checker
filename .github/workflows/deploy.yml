@@ -137,6 +137,20 @@ jobs:
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
           RULES_REPO_TOKEN: ${{ secrets.RULES_REPO_TOKEN }}
+      # scan_orchestrator.py's _scan_runner_image_ref() always resolves to
+      # the fixed `scan-runner-latest` tag — the deploy step above only
+      # builds/pushes the default `web` target, so without this the
+      # scan-runner image (which is what actually runs the rules engine)
+      # never gets updated by CI. See Dockerfile's top-of-file comment and
+      # scripts/deploy-fly.sh, which this mirrors.
+      - name: Build and push scan-runner image
+        run: >
+          flyctl deploy --remote-only --build-only --push --app veritech-scan
+          --build-target scan-runner --image-label scan-runner-latest
+          --build-secret rules_token="$RULES_REPO_TOKEN"
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+          RULES_REPO_TOKEN: ${{ secrets.RULES_REPO_TOKEN }}
       - name: Run database migrations
         run: ./scripts/migrate-fly.sh
         env:
