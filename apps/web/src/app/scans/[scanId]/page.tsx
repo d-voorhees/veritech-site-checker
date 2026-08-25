@@ -69,6 +69,23 @@ export default function ScanDetailPage({ params }: { params: Promise<{ scanId: s
     }
   }, [reportReady]);
 
+  // scanQuery/reportQuery/eventsQuery each poll independently on their own
+  // 3s interval and stop the instant scan.status leaves ACTIVE_STATUSES —
+  // there's no guarantee the last report/events poll landed after the scan
+  // actually finished, so a stale (e.g. pre-findings) snapshot can get
+  // frozen in place once polling stops. Force one more fetch of both the
+  // instant the scan is observed transitioning out of an active status.
+  const wasActiveRef = useRef(false);
+  const isActiveNow = !!scan && ACTIVE_STATUSES.has(scan.status);
+  useEffect(() => {
+    if (wasActiveRef.current && !isActiveNow) {
+      reportQuery.refetch();
+      eventsQuery.refetch();
+    }
+    wasActiveRef.current = isActiveNow;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isActiveNow]);
+
   if (scanQuery.isLoading || !scan) {
     return (
       <AppShell>
@@ -77,7 +94,7 @@ export default function ScanDetailPage({ params }: { params: Promise<{ scanId: s
     );
   }
 
-  const isActive = ACTIVE_STATUSES.has(scan.status);
+  const isActive = isActiveNow;
 
   const jobStatusByTask = new Map(scan.jobs.map((j) => [j.task_name, j.status]));
   const isTaskPending = (taskName: string) => {
@@ -348,10 +365,8 @@ function SectionHeading({ title, description }: { title: string; description: st
 
 function SeverityConfidenceLegend() {
   return (
-    <details id="legend" className="mt-4 rounded-md border border-border bg-muted/40 px-4 py-3 text-sm">
-      <summary className="cursor-pointer font-medium">
-        Severity, confidence, dollar impact &amp; remediation timing — legend
-      </summary>
+    <div id="legend" className="mt-4 rounded-md border border-border bg-muted/40 px-4 py-3 text-sm">
+      <div className="font-medium">Severity, confidence, dollar impact &amp; remediation timing — legend</div>
       <div className="mt-2 flex flex-col gap-2 text-muted-foreground">
         <p>
           <span className="font-medium text-foreground">Severity</span> (high / medium / low / info) is how much
@@ -374,7 +389,7 @@ function SeverityConfidenceLegend() {
           longer-term) is the rule&rsquo;s suggested urgency for addressing the finding.
         </p>
       </div>
-    </details>
+    </div>
   );
 }
 
@@ -418,7 +433,9 @@ function SeverityTile({
 }) {
   return (
     <div className="rounded-md border border-border p-4 text-center">
-      <div className={cn("text-2xl font-semibold")}>{pending ? "—" : count}</div>
+      <div className={cn(pending ? "text-sm font-medium text-muted-foreground" : "text-2xl font-semibold")}>
+        {pending ? "Calculating…" : count}
+      </div>
       <Badge variant={variant} className="mt-1">
         {label}
       </Badge>
@@ -445,55 +462,53 @@ function RulesCoverageSection({
   const rules = rulesChecked.rules ?? [];
   return (
     <Card className="mt-6 p-0">
-      <details>
-        <summary className="cursor-pointer list-none px-5 py-4">
-          <div className="text-base font-semibold tracking-tight">All checks &amp; findings</div>
-          <div className="mt-1 text-sm text-muted-foreground">
-            {pending
-              ? "This runs last, after all other scan collection tasks finish, so the outcomes below are not final yet."
-              : `${rulesChecked.total_count} rules checked, ${rulesChecked.fired_count} raised a finding or observation — expand for the full list.`}
-          </div>
-        </summary>
-        <div className="border-t border-border">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-border text-left text-xs uppercase tracking-wide text-muted-foreground">
-                <th className="px-5 py-2 font-medium">Category</th>
-                <th className="px-5 py-2 font-medium">Check</th>
-                <th className="px-5 py-2 font-medium">Outcome</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {rules.map((r) => (
-                <tr key={String(r.rule_key)}>
-                  <td className="px-5 py-2 text-muted-foreground">{String(r.category).replace(/_/g, " ")}</td>
-                  <td className="px-5 py-2">{String(r.check)}</td>
-                  <td className="px-5 py-2">
-                    {r.fired && r.positive_observation ? (
-                      <span className="inline-flex items-center gap-2">
-                        <Badge variant="success">positive</Badge>
-                        {String(r.title)}
-                      </span>
-                    ) : r.fired ? (
-                      <span className="inline-flex items-center gap-2">
-                        <Badge variant={severityToVariant(String(r.severity))}>{String(r.severity)}</Badge>
-                        {String(r.title)}
-                      </span>
-                    ) : pending ? (
-                      <span className="inline-flex items-center gap-1.5 text-muted-foreground">
-                        <Loader2 className="h-3 w-3 animate-spin" />
-                        Pending
-                      </span>
-                    ) : (
-                      <span className="text-muted-foreground">OK</span>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+      <div className="px-5 py-4">
+        <div className="text-base font-semibold tracking-tight">All checks &amp; findings</div>
+        <div className="mt-1 text-sm text-muted-foreground">
+          {pending
+            ? "This runs last, after all other scan collection tasks finish, so the outcomes below are not final yet."
+            : `${rulesChecked.total_count} rules checked, ${rulesChecked.fired_count} raised a finding or observation.`}
         </div>
-      </details>
+      </div>
+      <div className="border-t border-border">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b border-border text-left text-xs uppercase tracking-wide text-muted-foreground">
+              <th className="px-5 py-2 font-medium">Category</th>
+              <th className="px-5 py-2 font-medium">Check</th>
+              <th className="px-5 py-2 font-medium">Outcome</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-border">
+            {rules.map((r) => (
+              <tr key={String(r.rule_key)}>
+                <td className="px-5 py-2 text-muted-foreground">{String(r.category).replace(/_/g, " ")}</td>
+                <td className="px-5 py-2">{String(r.check)}</td>
+                <td className="px-5 py-2">
+                  {r.fired && r.positive_observation ? (
+                    <span className="inline-flex items-center gap-2">
+                      <Badge variant="success">positive</Badge>
+                      {String(r.title)}
+                    </span>
+                  ) : r.fired ? (
+                    <span className="inline-flex items-center gap-2">
+                      <Badge variant={severityToVariant(String(r.severity))}>{String(r.severity)}</Badge>
+                      {String(r.title)}
+                    </span>
+                  ) : pending ? (
+                    <span className="inline-flex items-center gap-1.5 text-muted-foreground">
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                      Pending
+                    </span>
+                  ) : (
+                    <span className="text-muted-foreground">OK</span>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </Card>
   );
 }

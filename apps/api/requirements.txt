@@ -29,4 +29,4 @@ jinja2==3.1.5
 # own git credential helper locally, a fine-grained PAT rewritten in via
 # `git config --global url.insteadOf` in CI and in the Docker build (see
 # docs/rules-engine.md's "Private rule catalog" section).
-veritech-scan-rules @ git+https://github.com/d-voorhees/veritech-scan-rules.git@v0.1.0
+veritech-scan-rules @ git+https://github.com/d-voorhees/veritech-scan-rules.git@v0.1.1
