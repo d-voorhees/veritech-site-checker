@@ -40,8 +40,13 @@ primary_region = "iad"
   min_machines_running = 1
 
   [[http_service.checks]]
+    # 15s previously meant a Postgres round-trip every 15s, 24/7, since
+    # this Machine never stops — that kept Neon's compute endpoint always
+    # active and drove compute usage with zero real traffic. 60s is still
+    # plenty responsive for a liveness check on an always-on Machine, and
+    # /health itself now caches the real DB check (see app/main.py).
     grace_period = "10s"
-    interval = "15s"
+    interval = "60s"
     method = "GET"
     timeout = "5s"
     path = "/health"

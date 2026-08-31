@@ -1,4 +1,5 @@
 import json
+import time
 
 from fastapi import FastAPI, Response, status
 from fastapi.middleware.cors import CORSMiddleware
@@ -36,25 +37,43 @@ app.include_router(auth_router, prefix="/api/v1")
 app.include_router(scans_router, prefix="/api/v1")
 
 
+
+# The web/API Machine runs always-on (min_machines_running = 1 in fly.toml),
+# so Fly polls /health continuously for the Machine's whole lifetime, not
+# just after an autostart. Hitting Postgres on every poll kept Neon's
+# compute endpoint perpetually active and never let it autosuspend, driving
+# compute usage even with zero real traffic. Caching the actual DB check
+# for a few minutes keeps /health meaningful without pinging Neon 24/7.
+_HEALTH_CHECK_CACHE_SECONDS = 300
+_last_postgres_check_at = 0.0
+_last_postgres_ok = False
+
+
 @app.get("/health")
 def health() -> Response:
-    """Readiness check: verifies Postgres connectivity. Used by Fly's
-    http_service health check (proxied through Next.js — see
-    next.config.mjs's rewrite for /health) to decide whether the web/API
-    Machine is ready to receive traffic after an autostart.
+    """Readiness check: verifies Postgres connectivity (cached — see
+    _HEALTH_CHECK_CACHE_SECONDS above). Used by Fly's http_service health
+    check (proxied through Next.js — see next.config.mjs's rewrite for
+    /health) to decide whether the web/API Machine is ready to receive
+    traffic.
     """
-    checks = {"postgres": False}
+    global _last_postgres_check_at, _last_postgres_ok
 
-    try:
-        db = SessionLocal()
+    now = time.monotonic()
+    if now - _last_postgres_check_at >= _HEALTH_CHECK_CACHE_SECONDS:
         try:
-            db.execute(text("SELECT 1"))
-            checks["postgres"] = True
-        finally:
-            db.close()
-    except Exception as exc:  # noqa: BLE001
-        logger.warning("health_check_postgres_failed", error=str(exc))
+            db = SessionLocal()
+            try:
+                db.execute(text("SELECT 1"))
+                _last_postgres_ok = True
+            finally:
+                db.close()
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("health_check_postgres_failed", error=str(exc))
+            _last_postgres_ok = False
+        _last_postgres_check_at = now
 
+    checks = {"postgres": _last_postgres_ok}
     healthy = all(checks.values())
     payload = {"status": "ok" if healthy else "degraded", "checks": checks}
     return Response(
