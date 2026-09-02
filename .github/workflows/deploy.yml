@@ -150,28 +150,45 @@ jobs:
         # guards against a stale-but-healthy Machine fooling this check)
         # and is currently passing its health check. Any other failure
         # (bad build, genuinely unhealthy app, etc.) still fails the job.
+        #
+        # The verification call itself hits the exact same flaky
+        # api.machines.dev API — a single-shot check inherits the same
+        # false-negative risk it's meant to rule out (this bit us on
+        # 2026-09-02: the Machine was already confirmed healthy seconds
+        # after the job failed). So it retries several times with backoff
+        # before concluding the deploy genuinely didn't land.
         run: |
-          for attempt in 1 2 3; do
+          verify_deployed() {
+            local sha="$1" tries=0 status
+            while [ "$tries" -lt 8 ]; do
+              tries=$((tries + 1))
+              status=$(flyctl status --app veritech-scan --json 2>/dev/null)
+              if [ -n "$status" ] && echo "$status" | jq -e --arg sha "$sha" '
+                    .Machines[0].state == "started"
+                    and .Machines[0].image_ref.labels.GH_SHA == $sha
+                    and ([.Machines[0].checks[]?.status] | length > 0)
+                    and ([.Machines[0].checks[]?.status] | all(. == "passing"))
+                  ' >/dev/null 2>&1; then
+                return 0
+              fi
+              sleep 10
+            done
+            return 1
+          }
+
+          for attempt in 1 2; do
             if flyctl deploy --remote-only --app veritech-scan \
               --build-secret rules_token="$RULES_REPO_TOKEN"; then
               exit 0
             fi
 
-            echo "::warning::flyctl deploy attempt $attempt exited non-zero; verifying actual Machine state against the Fly API before deciding this is a real failure"
-            sleep 10
-            STATUS=$(flyctl status --app veritech-scan --json 2>/dev/null || echo '{}')
-            if echo "$STATUS" | jq -e --arg sha "$GITHUB_SHA" '
-                  .Machines[0].state == "started"
-                  and .Machines[0].image_ref.labels.GH_SHA == $sha
-                  and ([.Machines[0].checks[]?.status] | length > 0)
-                  and ([.Machines[0].checks[]?.status] | all(. == "passing"))
-                ' >/dev/null 2>&1; then
+            echo "::warning::flyctl deploy attempt $attempt exited non-zero; verifying actual Machine state against the Fly API (retrying the check itself) before deciding this is a real failure"
+            if verify_deployed "$GITHUB_SHA"; then
               echo "::warning::Machine is confirmed running commit $GITHUB_SHA and passing its health check — flyctl's error was a false negative (known api.machines.dev polling flakiness). Treating the deploy as successful."
               exit 0
             fi
 
-            echo "Machine not yet confirmed on commit $GITHUB_SHA and healthy — this looks like a real failure." >&2
-            [ "$attempt" -lt 3 ] && sleep 15
+            echo "Machine not confirmed on commit $GITHUB_SHA and healthy after retrying verification — this looks like a real failure." >&2
           done
           exit 1
         env:
