@@ -32,7 +32,7 @@ flowchart TB
         end
     end
 
-    Postgres["Neon PostgreSQL\n(external to Fly —\nthe one persistent dependency)"]
+    Postgres["Supabase PostgreSQL\n(external to Fly, via the Session pooler —\nthe one persistent dependency)"]
     Target["Public target website\n(bounded, rate-limited,\nSSRF-checked)"]
 
     Browser -->|HTTPS| Web

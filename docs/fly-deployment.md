@@ -9,11 +9,15 @@ rotation).
 ## Prerequisites
 
 - A Fly.io account and org.
-- A [Neon](https://neon.tech) account and project. Veritech Scan's database
-  is **not** hosted on Fly — it's a Neon Postgres project, reached over TLS
-  from whichever Fly Machine needs it (see `docs/architecture.md`'s "Data
-  flow"). Neon's own CLI (`npx neonctl`) or dashboard both work for
-  provisioning; no Docker needed either way.
+- A [Supabase](https://supabase.com) account and project. Veritech Scan's
+  database is **not** hosted on Fly — it's a Supabase Postgres project,
+  reached over TLS from whichever Fly Machine needs it (see
+  `docs/architecture.md`'s "Data flow"), via Supabase's **Session pooler**
+  endpoint rather than its direct-connection host (the direct host resolves
+  IPv6-only, which most networks and Fly Machines can't reach without paying
+  for Supabase's IPv4 add-on — the Session pooler is dual-stack and, as
+  session- rather than transaction-mode pooling, behaves like a normal
+  persistent connection).
 - [`flyctl`](https://fly.io/docs/flyctl/install/) installed locally.
   **No Docker or Docker Desktop is required anywhere in this workflow** —
   `fly deploy --remote-only` builds the image on Fly's own infrastructure.
@@ -33,23 +37,31 @@ flyctl auth login
 make fly-init                       # flyctl apps create "$FLY_APP_NAME"
 ```
 
-## 2. Provision Postgres (Neon)
+## 2. Provision Postgres (Supabase)
 
 The app only needs a `postgresql+psycopg://...` connection string in
 `DATABASE_URL` — it doesn't care that the database isn't on Fly.
 
-```bash
-npx neonctl projects create --name veritech-scan
-npx neonctl connection-string --project-id <project-id-from-above>
+Create a project at [supabase.com](https://supabase.com) (dashboard), then
+open its **Connect** button (top of any project page) and switch to the
+**Session pooler** tab — not "Direct connection" (IPv6-only, unreachable
+from most networks/Fly Machines without the paid IPv4 add-on) and not
+"Transaction pooler" (PgBouncer transaction-mode pooling breaks prepared
+statements and other session-scoped behavior). It shows a connection string
+shaped like:
+
+```
+postgresql://postgres.<project-ref>:[YOUR-PASSWORD]@aws-0-<region>.pooler.supabase.com:5432/postgres
 ```
 
-Take that connection string and rewrite its scheme from `postgresql://` to
-`postgresql+psycopg://` (SQLAlchemy needs the driver in the scheme; keep
-`?sslmode=require` and any `channel_binding` param as-is), then set it:
+Fill in the real database password (Settings → Database → reset it there if
+you don't have it saved), and rewrite the scheme from `postgresql://` to
+`postgresql+psycopg://` (SQLAlchemy needs the driver in the scheme; add
+`?sslmode=require`), then set it:
 
 ```bash
 flyctl secrets set \
-  DATABASE_URL="postgresql+psycopg://<user>:<password>@<host>/<db>?sslmode=require&channel_binding=require" \
+  DATABASE_URL="postgresql+psycopg://postgres.<project-ref>:<password>@aws-0-<region>.pooler.supabase.com:5432/postgres?sslmode=require" \
   --app "$FLY_APP_NAME"
 ```
 

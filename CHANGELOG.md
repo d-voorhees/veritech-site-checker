@@ -2,6 +2,31 @@
 
 All notable changes to this project are documented in this file.
 
+## v1.11 — 2026-09-01
+
+### Changed
+
+- **Database provider switched from Neon to Supabase.** Production
+  `DATABASE_URL` now points at a Supabase Postgres project (`veritech-scan`,
+  ref `occaoqimhwzywscpsfvn`) instead of Neon. No data migration was needed —
+  the Neon database held no real data — so this was a schema replay
+  (`alembic upgrade head` against the new project) plus a secret rotation,
+  not an app change; `app/config.py`'s `resolved_database_url` never assumed
+  a specific provider. One real constraint surfaced along the way: Supabase's
+  direct-connection host (`db.<project-ref>.supabase.co`) resolves IPv6-only
+  with no IPv4 fallback on the free tier (confirmed via DNS — an `AAAA`
+  record with no `A` record), which the machine doing the migration had no
+  route to. Rather than gamble on whether Fly Machines' outbound IPv6 would
+  fare any better, `DATABASE_URL` uses Supabase's **Session pooler** endpoint
+  instead — dual-stack, and session- rather than transaction-mode pooling,
+  so it behaves like a normal persistent connection without PgBouncer
+  transaction-mode's prepared-statement/session-state caveats. Docs updated
+  throughout (`README.md`, `docs/architecture.md`, `docs/fly-deployment.md`,
+  `docs/fly-operations.md`) to describe Supabase provisioning and the
+  Session-pooler requirement; `fly.toml`'s health-check-caching comment and
+  `app/main.py`'s caching logic both keep their original Neon-specific
+  reasoning since that's still accurate history for why the fix was made.
+
 ## v1.10 — 2026-08-21
 
 ### Fixed

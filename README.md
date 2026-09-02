@@ -8,10 +8,10 @@ It answers one practical question for a prospective buyer of a web-based busines
 
 > Is this web property worth deeper technical diligence, and what should I investigate next?
 
-Current version: v1.10. Release history in [CHANGELOG.md](CHANGELOG.md). Build story: [A Technical Due Diligence Scanner for Web-Business Buyers](https://dvoorhees.com/2026/08/15/building-a-technical-due-diligence-scanner-for-web-business-buyers/). Live app: [sitechecker.veritechdiligence.com](https://sitechecker.veritechdiligence.com).
+Current version: v1.11. Release history in [CHANGELOG.md](CHANGELOG.md). Build story: [A Technical Due Diligence Scanner for Web-Business Buyers](https://dvoorhees.com/2026/08/15/building-a-technical-due-diligence-scanner-for-web-business-buyers/). Live app: [sitechecker.veritechdiligence.com](https://sitechecker.veritechdiligence.com).
 
 **At a glance**
-- Stack: Next.js, FastAPI, PostgreSQL (Neon), Playwright/Chromium, Fly.io Machines  
+- Stack: Next.js, FastAPI, PostgreSQL (Supabase), Playwright/Chromium, Fly.io Machines  
 - Rules engine: 26 versioned, deterministic rules; zero LLM involvement in findings
 - Compute model: an on-demand Fly Machine per scan, no persistent worker or queue
 - Turnaround: a scan returns a full report in minutes
@@ -31,7 +31,7 @@ Veritech Site Checker runs as a single Fly.io app with two Machine roles, built 
 
 ### Data flow
 
-The database is a [Neon](https://neon.tech) Postgres project, external to the Fly app, reached over a TLS connection (`sslmode=require`) from whichever Machine needs it:
+The database is a [Supabase](https://supabase.com) Postgres project, external to the Fly app, reached over a TLS connection (`sslmode=require`) from whichever Machine needs it — specifically through Supabase's **Session pooler** endpoint, not the direct-connection host (see Known limitations for why):
 
 ```
 Browser
@@ -40,12 +40,12 @@ Browser
 Web/API Machine (Fly, autostop/autostart)
   │ reads/writes scan state           │ POST /apps/{app}/machines
   ▼                                   ▼ (Fly Machines API)
-Neon Postgres (external) ◄──────── Scan-runner Machine (Fly, on-demand)
+Supabase Postgres (external) ◄──── Scan-runner Machine (Fly, on-demand)
   ▲ persists evidence/findings/events, then exits
   └───────────────────────────────────┘
 ```
 
-Both Machine roles connect to the same Neon database independently; there's no proxy or connection-sharing between them. Fly and the database also scale and bill independently: both Machine roles scale to zero when idle, while Neon is the one component that's always provisioned (see Known limitations).
+Both Machine roles connect to the same Supabase database independently; there's no proxy or connection-sharing between them. Fly and the database also scale and bill independently: both Machine roles scale to zero when idle, while Supabase is the one component that's always provisioned (see Known limitations).
 
 ## Evidence first, rules second
 
@@ -161,7 +161,7 @@ Set these with `flyctl secrets set`; see `docs/fly-deployment.md` for the full w
 | `FLY_APP_NAME` | The Fly app name; used by both `flyctl` commands and the app's own Fly Machines API calls. |
 | `FLY_API_TOKEN` | Lets the API create scan-runner Machines. Server-side only, never sent to the browser. |
 | `FLY_PRIMARY_REGION` | Region new scan-runner Machines are created in. |
-| `DATABASE_URL` | The Neon Postgres connection string (`postgresql+psycopg://...?sslmode=require`), set by hand from the Neon dashboard/CLI, not by Fly. `FLY_DATABASE_URL` is an alternate name the app also accepts, for the (unused here) case of `fly postgres attach` setting it automatically instead. |
+| `DATABASE_URL` | The Supabase Postgres **Session pooler** connection string (`postgresql+psycopg://postgres.<project-ref>:<password>@aws-0-<region>.pooler.supabase.com:5432/postgres?sslmode=require`), set by hand from the Supabase dashboard's "Connect" modal, not by Fly — see Known limitations for why the pooler host is used instead of the direct-connection one. `FLY_DATABASE_URL` is an alternate name the app also accepts, for the (unused here) case of `fly postgres attach` setting it automatically instead. |
 | `APP_URL` | The app's public URL. |
 | `MARKETING_SITE_URL`, `NEXT_PUBLIC_PRODUCT_NAME`, `PARENT_BRAND` | Product identity shown in the UI/API. |
 | `JWT_SECRET` | Session signing secret. |
@@ -177,7 +177,7 @@ Set these with `flyctl secrets set`; see `docs/fly-deployment.md` for the full w
 
 ## Database requirements
 
-PostgreSQL is the only persistent dependency: scan status, events, evidence, findings, and reports are all Postgres rows. There is no Redis and no other stateful service. Production uses [Neon](https://neon.tech) (project `veritech-scan`), external to Fly, not Fly's own Postgres offering. `app/config.py`'s `resolved_database_url` also accepts `FLY_DATABASE_URL` as a fallback name, which would let a future move to Fly Postgres (or any other provider) work by just changing the secret value, but nothing in this deployment relies on that today. See `docs/fly-deployment.md` for provisioning and `docs/fly-operations.md` for backup guidance.
+PostgreSQL is the only persistent dependency: scan status, events, evidence, findings, and reports are all Postgres rows. There is no Redis and no other stateful service. Production uses [Supabase](https://supabase.com) (project `veritech-scan`, ref `occaoqimhwzywscpsfvn`), external to Fly, not Fly's own Postgres offering. `app/config.py`'s `resolved_database_url` also accepts `FLY_DATABASE_URL` as a fallback name, which would let a future move to Fly Postgres (or any other provider) work by just changing the secret value, but nothing in this deployment relies on that today. See `docs/fly-deployment.md` for provisioning and `docs/fly-operations.md` for backup guidance.
 
 ## Migrations
 
@@ -245,7 +245,8 @@ Summarized here; full detail in `docs/threat-model.md`:
 - **Web/API cold starts.** The web/API Machine runs always-on (`min_machines_running = 1`, `auto_stop_machines = "off"` in `fly.toml`), not scale-to-zero. A 2026-08-13 investigation found cold starts here ran roughly 13 to 18 seconds regardless of VM size, image size, or region, pointing to a fixed Fly platform boot cost rather than anything fixable app-side. Always-on trades a small continuous compute cost for eliminating that wait entirely. It runs on the smallest VM tier (`shared-cpu-1x`/256mb) since a bigger VM didn't help the cold start anyway; watch for OOM restarts under real traffic as the first sign that tier is too small for steady-state load.
 - **Scan-runner cold starts.** Every scan waits for its Fly Machine to boot before processing starts; there's no "warm" runner. These remain scale-to-zero since they only run for the duration of a scan.
 - **One scan per runner.** Each scan gets its own Machine; there is no batching or sharing, by design (see Architecture above).
-- **The database is a persistent, paid dependency**, billed and managed separately from Fly (a different provider, a different invoice). Neon Postgres doesn't scale to zero at the tier this project uses.
+- **The database is a persistent dependency**, billed and managed separately from Fly (a different provider, a different invoice). It's currently on Supabase's free tier, which caps database size at 500MB and pauses a project after 7 days with no API/database traffic — this app's own health check (`/health`, hit every 60s by Fly, cached for 5 minutes internally) keeps traffic frequent enough that the pause threshold is never reached in practice.
+- **Direct-connection database access is IPv6-only.** Supabase's direct-connection host (`db.<project-ref>.supabase.co`) resolves to an IPv6 address only, with no IPv4 fallback unless you pay for Supabase's IPv4 add-on. Anything without outbound IPv6 (a lot of home/office networks, some CI runners) can't reach it. `DATABASE_URL` therefore points at Supabase's **Session pooler** endpoint instead, which is dual-stack (IPv4 + IPv6) and, being session-mode rather than transaction-mode pooling, behaves like a normal persistent connection with none of PgBouncer transaction-mode's prepared-statement/session-state caveats.
 - **No enforced scan cap.** `scans_used` is tracked per user but nothing currently reads it to block a scan. Every scan is free for now; there is no payment processor or paywall.
 - **Finite scan resource/time limits.** `SCAN_MAX_TOTAL_MINUTES` (default 10) and the 10/25/50 page caps bound every scan; browser rendering covers the homepage only, not every crawled page.
 - `robots.txt` is not enforced against the crawler, but the crawled page set is cross-referenced against robots.txt `Disallow` rules and the declared sitemap, both reported in the Crawl and indexability section.
@@ -260,8 +261,8 @@ Full step-by-step in [`docs/fly-deployment.md`](docs/fly-deployment.md); day-two
 export FLY_APP_NAME=veritech-scan
 flyctl auth login
 make fly-init                # create the app
-# create a Neon project, get its connection string, and set every secret
-# listed above (DATABASE_URL included): see docs/fly-deployment.md
+# create a Supabase project, get its Session pooler connection string, and
+# set every secret listed above (DATABASE_URL included): see docs/fly-deployment.md
 make fly-deploy               # fly deploy --remote-only
 make fly-migrate              # alembic upgrade head, via a one-off Fly Machine
 make fly-status                # app + Machine status

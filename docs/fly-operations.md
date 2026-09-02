@@ -42,9 +42,9 @@ curl -s -b cookies.txt "$APP_URL/api/v1/scans/<scan_id>" | jq '.status, .failure
 curl -s -b cookies.txt "$APP_URL/api/v1/scans/<scan_id>/events" | jq -r '.[] | "\(.created_at)  \(.event_type)  \(.message)"'
 ```
 
-**Via direct SQL** (the database is Neon, external to Fly — connect with
-`psql "$DATABASE_URL"`, `npx neonctl connection-string --project-id
-<id> | xargs psql`, or Neon's dashboard SQL editor):
+**Via direct SQL** (the database is Supabase, external to Fly — connect with
+`psql "$DATABASE_URL"` using the Session pooler string from `flyctl secrets`,
+or Supabase's dashboard SQL editor):
 
 ```sql
 select id, status, failure_summary, runner_machine_id, retry_count, started_at, completed_at
