@@ -51,8 +51,9 @@
   .finding-field { margin-top: 0.5rem; }
   .finding-field .label { font-size: 0.72rem; text-transform: uppercase; color: #5b6472; letter-spacing: 0.04em; }
   .finding-meta-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.75rem; }
-  details.evidence { margin-top: 0.6rem; background: #f7f8fa; border-radius: 6px; padding: 0.5rem 0.7rem; }
-  details.evidence summary { cursor: pointer; font-size: 0.8rem; font-weight: 600; color: #33404d; }
+  .evidence { margin-top: 0.6rem; background: #f7f8fa; border-radius: 6px; padding: 0.5rem 0.7rem; }
+  .section-title { margin-bottom: 0.5rem; }
+  .evidence .section-title { font-size: 0.8rem; font-weight: 600; color: #33404d; }
   .evidence-item { margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px dashed #d9dde3; font-size: 0.8rem; }
   .evidence-item:first-child { border-top: none; }
   pre { white-space: pre-wrap; word-break: break-word; background: #fff; border: 1px solid #e5e8ec; padding: 0.5rem; border-radius: 4px; font-size: 0.72rem; }
@@ -64,12 +65,12 @@
   .coverage-banner.blocked { border-color: #d64545; background: #fbe1e1; color: #7a1f1f; }
   .coverage-banner.partial { border-color: #c98a1f; background: #fbeecb; color: #6b4a00; }
   .coverage-banner .coverage-title { font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; font-size: 0.8rem; }
-  details.collapsible-table { border: 1px solid #d9dde3; border-radius: 8px; padding: 0.75rem 1rem; margin: 0.5rem 0; }
-  details.collapsible-table summary { cursor: pointer; font-weight: 600; font-size: 0.88rem; }
-  details.collapsible-table table { margin-top: 0.75rem; }
-  details.legend { border: 1px solid #d9dde3; border-radius: 8px; padding: 0.6rem 1rem; margin: 0.5rem 0 1rem; background: #f7f8fa; }
-  details.legend summary { cursor: pointer; font-weight: 600; font-size: 0.8rem; color: #33404d; }
-  details.legend p { font-size: 0.82rem; margin: 0.5rem 0; }
+  .collapsible-table { border: 1px solid #d9dde3; border-radius: 8px; padding: 0.75rem 1rem; margin: 0.5rem 0; }
+  .collapsible-table .section-title { font-weight: 600; font-size: 0.88rem; }
+  .collapsible-table table { margin-top: 0.75rem; }
+  .legend { border: 1px solid #d9dde3; border-radius: 8px; padding: 0.6rem 1rem; margin: 0.5rem 0 1rem; background: #f7f8fa; }
+  .legend .section-title { font-weight: 600; font-size: 0.8rem; color: #33404d; }
+  .legend p { font-size: 0.82rem; margin: 0.5rem 0; }
   .legend-link { font-size: 0.8rem; }
   .platform-callout { border: 1px solid #d9dde3; border-radius: 8px; padding: 0.75rem 1rem; margin: 0.5rem 0 1rem; background: #f7f8fa; }
   .platform-callout .label { font-size: 0.7rem; text-transform: uppercase; color: #5b6472; letter-spacing: 0.05em; }
@@ -84,6 +85,13 @@
 {% macro dt(value) -%}
 {% if value %}<span class="dt" data-utc="{{ value.isoformat() }}">{{ value.strftime('%Y-%m-%d %H:%M UTC') }}</span>{% else %}—{% endif %}
 {%- endmacro %}
+
+{% macro section(css_class, title, id=None) %}
+<div class="{{ css_class }}"{% if id %} id="{{ id }}"{% endif %}>
+  <div class="section-title">{{ title }}</div>
+  {{ caller() }}
+</div>
+{% endmacro %}
 
 <div class="eyebrow">{{ report.parent_brand }}</div>
 <h1>{{ report.report_name }}</h1>
@@ -123,8 +131,7 @@
   <div class="meta-item"><div class="label">Info</div><div class="value"><span class="badge badge-info">{{ report.severity_counts.info }}</span></div></div>
 </div>
 
-<details class="collapsible-table">
-  <summary>{{ report.rules_checked.total_count }} rules checked, {{ report.rules_checked.fired_count }} raised a finding or observation — expand for the full list</summary>
+{% call section("collapsible-table", report.rules_checked.total_count ~ " rules checked, " ~ report.rules_checked.fired_count ~ " raised a finding or observation") %}
   <p style="font-size:0.82rem; color:#5b6472;">Every rule ran, even the ones that don't appear in the risk register below; those simply found nothing to flag. A green "positive" row is a favorable observation (e.g. DKIM signing found) — it's evidence, not a risk, so it doesn't appear in the register either.</p>
   <table class="tech-table">
     <colgroup>
@@ -149,17 +156,16 @@
     {% endfor %}
     </tbody>
   </table>
-</details>
+{% endcall %}
 
 <h2>Prioritized risk register</h2>
 <p class="legend-link"><a href="#legend">What do severity, confidence, dollar impact, and remediation timing mean?</a></p>
-<details class="legend" id="legend">
-  <summary>Severity, confidence, dollar impact &amp; remediation timing — legend</summary>
+{% call section("legend", "Severity, confidence, dollar impact & remediation timing — legend", id="legend") %}
   <p><strong>Severity</strong> (high / medium / low / info) is how much this finding matters on its own if nothing else changes — high means a real, current problem (e.g. no HTTPS); info means worth knowing but not urgent on its own.</p>
   <p><strong>Confidence</strong> (high / medium / low) is how sure this scan is that the finding is real, given what it could observe — high means the evidence is direct and unambiguous; lower confidence usually means the check is a best-effort probe (e.g. DKIM selector discovery only checks common defaults) rather than an exhaustive one.</p>
   <p><strong>Dollar impact</strong> ($ / $$ / $$$) is a rough, rule-assigned band for how much this is worth caring about financially — never an exact number, and not something a reader chooses. For a few findings (domain/TLS expiration) the band reflects the risk of inaction rather than the small direct fix cost, because losing the domain or certificate would be severe even though renewing it is cheap.</p>
   <p><strong>Remediation timing</strong> (30-day / 60-day / 90-day / longer-term) is the rule's suggested urgency for addressing the finding, also set by the rule itself.</p>
-</details>
+{% endcall %}
 {% if report.findings %}
   {% for f in report.findings %}
   <div class="finding">
@@ -173,8 +179,7 @@
     <div class="finding-field"><div class="label">Category</div><div>{{ f.category }}</div></div>
     <div class="finding-field"><div class="label">Impact (observation → interpretation)</div><div>{{ f.impact }}</div></div>
     <div class="finding-field"><div class="label">Recommended next step</div><div>{{ f.recommended_next_step }}</div></div>
-    <details class="evidence">
-      <summary>Linked evidence ({{ f.evidence|length }})</summary>
+    {% call section("evidence", "Linked evidence (" ~ f.evidence|length ~ ")") %}
       {% for e in f.evidence %}
       <div class="evidence-item">
         <div><strong>{{ e.category }}</strong> — {{ e.source_type }} — confidence: {{ e.confidence }}</div>
@@ -182,7 +187,7 @@
         <div style="color:#5b6472; font-size:0.72rem;">Source: {{ e.source_url_or_identifier }} · captured {{ dt(e.captured_at) }}</div>
       </div>
       {% endfor %}
-    </details>
+    {% endcall %}
   </div>
   {% endfor %}
 {% else %}
