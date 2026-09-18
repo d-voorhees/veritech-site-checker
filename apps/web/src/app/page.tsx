@@ -17,6 +17,7 @@ export default function HomePage() {
           --accent: #1F3A5F;
           --accent-hover: #132845;
           --parchment: #EFEBE0;
+          --gray: #EDEDE8;
 
           background: var(--paper);
           color: var(--ink);
@@ -190,6 +191,14 @@ export default function HomePage() {
         .landing .section {
           padding: 56px 0;
           border-bottom: 1px solid var(--rule);
+        }
+
+        .landing .section.alt {
+          background: var(--gray);
+        }
+
+        .landing .access.alt {
+          background: var(--gray);
         }
 
         .landing .section-grid {
@@ -378,7 +387,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section className="section">
+      <section className="section alt">
         <div className="outer">
           <div className="section-grid">
             <div className="section-num">02</div>
@@ -460,7 +469,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section className="section">
+      <section className="section alt">
         <div className="outer">
           <div className="section-grid">
             <div className="section-num">04</div>
@@ -504,7 +513,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section className="access">
+      <section className="access alt">
         <div className="outer">
           <div className="access-inner">
             <p className="eyebrow">Access</p>
