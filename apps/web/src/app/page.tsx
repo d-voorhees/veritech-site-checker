@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 export const metadata: Metadata = {
-  title: "Veritech Site Checker — Technical Pre-Screening for Web-Based Business Acquisitions",
+  title: "Veritech Site Checker — automated technical risk scan for web acquisitions",
 };
 
 export default function HomePage() {
@@ -225,6 +225,15 @@ export default function HomePage() {
 
         .landing .copy:last-child { margin-bottom: 0; }
 
+        .landing .copy-list {
+          font-size: 1.0625rem;
+          line-height: 1.7;
+          margin: 0 0 16px 0;
+          padding-left: 1.25em;
+        }
+
+        .landing .copy-list li { margin: 0 0 4px 0; }
+
         /* ---------- Check table ---------- */
 
         .landing .check-table {
@@ -321,13 +330,11 @@ export default function HomePage() {
       <section className="hero">
         <div className="outer">
           <div className="hero-inner">
-            <p className="eyebrow">Veritech Site Checker — an automated tool from Veritech Diligence</p>
-            <h1>Run an analysis on the site you&rsquo;re about to buy. See exactly what you need to know.</h1>
+            <p className="eyebrow">Veritech Site Checker — automated technical risk scan for web acquisitions</p>
+            <h1>Run a technical risk scan on a website you&rsquo;re considering buying &mdash; in a few minutes.</h1>
             <p className="standfirst">
-              Enter the domain you&rsquo;re evaluating. Scan automatically checks what&rsquo;s already public, DNS
-              posture, redirects, third-party dependencies, and the technology behind the site, and returns a risk
-              register in minutes. No analyst sits between you and the result, and every finding links back to the
-              exact evidence behind it.
+              See whether a deal is worth a full technical review before you ask the seller for access or spend
+              hours digging by hand.
             </p>
 
             <div className="cta-row">
@@ -345,17 +352,26 @@ export default function HomePage() {
             <div className="section-num">01</div>
             <div className="section-content">
               <p className="eyebrow">The question it answers</p>
-              <h2>Is this worth a full technical review?</h2>
+              <h2>Is this deal worth a full technical review?</h2>
               <p className="copy">
-                You&rsquo;re looking at a listing on Acquire.com, Flippa, or through a broker, and you need to know
-                quickly whether it holds up before you spend real time or ask a seller for system access. Scan
-                reads what&rsquo;s already public: the DNS records, the response headers, the homepage as
-                rendered, the dependencies it loads.
+                You&rsquo;re evaluating a listing on Acquire.com, Flippa, or through a broker, and you need to know
+                quickly whether the technology holds up before you invest real time or budget.
+              </p>
+              <p className="copy">Site Checker reads what&rsquo;s already public about the target site:</p>
+              <ul className="copy-list">
+                <li>DNS records and email posture</li>
+                <li>Response headers and redirects</li>
+                <li>The rendered homepage and its dependencies</li>
+                <li>The technology stack behind the site</li>
+              </ul>
+              <p className="copy">
+                It runs the moment you submit the domain &mdash; no scheduling, no analyst in the loop &mdash; and
+                returns a prioritized risk register in a few minutes: what&rsquo;s solid, what needs a closer look,
+                and what should make you pause before going further.
               </p>
               <p className="copy">
-                It runs the moment you submit a domain, no scheduling and no waiting on an analyst, and returns a
-                prioritized answer in minutes rather than days: what&rsquo;s solid, what needs a closer look, and
-                what should stop you before you go further.
+                This tool is intended only for domains you are actively evaluating for acquisition, not for random
+                sites or competitors.
               </p>
             </div>
           </div>
@@ -401,7 +417,7 @@ export default function HomePage() {
                   <tr>
                     <td className="cat">Technology stack</td>
                     <td className="desc">
-                      What&rsquo;s actually running the site — CMS and website-builder platforms, e-commerce,
+                      What&rsquo;s actually running the site — CMS and website builders, e-commerce,
                       frontend frameworks, analytics and tag managers, advertising and email marketing, customer
                       support and chat, payments, CDN and hosting, fonts and JS libraries, consent management,
                       forms and scheduling, search, captcha, and embedded video or maps — detected from the
@@ -434,9 +450,9 @@ export default function HomePage() {
               <p className="eyebrow">How a finding becomes a finding</p>
               <h2>Every finding traces back to evidence.</h2>
               <p className="copy">
-                A fixed set of twelve rules, not a person and not a model guessing, turns what Scan collects into
-                severity- and confidence-scored findings automatically. Click into any finding in the risk register
-                and see the exact HTTP response, DNS record, or rendered page behind it.
+                A fixed set of twelve rules &mdash; not a person, not a model guessing &mdash; turns what Site
+                Checker collects into severity- and confidence-scored findings automatically. Click into any finding
+                in the risk register and see the exact HTTP response, DNS record, or rendered page behind it.
               </p>
               <p className="copy">The system separates what it observed from what that observation might mean. A hardening opportunity is never presented as a confirmed vulnerability.</p>
             </div>
@@ -449,15 +465,15 @@ export default function HomePage() {
           <div className="section-grid">
             <div className="section-num">04</div>
             <div className="section-content">
-              <p className="eyebrow">What Scan does not do</p>
+              <p className="eyebrow">What Site Checker does not do</p>
               <h2>A boundary, stated plainly.</h2>
               <p className="copy">
-                Scan is fully automated and stays inside a fixed boundary. It only reads what&rsquo;s already
-                public, and it does not attempt to log in, test credentials, bypass access controls, or confirm a
-                vulnerability by exploiting it. Where it flags something that could be a security gap, the report
-                labels it as an observation, not a confirmed compromise.
+                Site Checker is fully automated and stays inside a fixed boundary. It only reads what&rsquo;s
+                already public, and it does not attempt to log in, test credentials, bypass access controls, or
+                confirm a vulnerability by exploiting it. Where it flags something that could be a security gap, the
+                report labels it as an observation, not a confirmed compromise.
               </p>
-              <p className="copy">Scan gives you a first read. It does not replace the full nine-layer technical review once a target is worth pursuing further.</p>
+              <p className="copy">Site Checker gives you a first read. It does not replace the full nine-layer technical review once a target is worth pursuing further.</p>
               <a href="https://veritechdiligence.com/#contact" className="btn-secondary">
                 See what the full review covers <span className="arrow">→</span>
               </a>
@@ -475,9 +491,9 @@ export default function HomePage() {
               <h2>Where to focus, not just whether to look further.</h2>
               <p className="copy">
                 You&rsquo;re working inside a limited evaluation window, and most of what you need to decide
-                whether to go deeper is already sitting in public records and the page itself. Scan runs the moment
-                you enter a domain, before you ask a seller for access, before you spend a day checking it by hand,
-                and before you commit budget to a full review.
+                whether to go deeper is already sitting in public records and the page itself. Site Checker runs
+                the moment you enter the domain you&rsquo;re evaluating: before you ask a seller for access, before
+                you spend a day checking it by hand, and before you commit budget to a full review.
               </p>
               <p className="copy">What comes back tells you where that review should focus, not just whether to run one.</p>
               <a href="https://veritechdiligence.com/#contact" className="btn-secondary">
