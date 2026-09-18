@@ -511,7 +511,7 @@ export default function HomePage() {
             <h2>Veritech Site Checker is in early access.</h2>
             <p className="access-copy">
               Enter your email, we&rsquo;ll send you a sign-in link, and you can
-              run your first scan right away &mdash; no invitation needed.
+              run your first scan on a target deal right away &mdash; no invitation needed.
             </p>
             <div className="cta-row">
               <Link href="/login" className="btn-primary">
